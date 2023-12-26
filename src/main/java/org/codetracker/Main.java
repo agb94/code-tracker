@@ -1,142 +1,74 @@
 package org.codetracker;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.codetracker.api.*;
 import org.codetracker.change.Change;
-import org.codetracker.element.Attribute;
-import org.codetracker.element.Block;
 import org.codetracker.element.Method;
-import org.codetracker.element.Variable;
 import org.eclipse.jgit.lib.Repository;
 import org.refactoringminer.api.GitService;
 import org.refactoringminer.util.GitServiceImpl;
 
-import gr.uom.java.xmi.LocationInfo.CodeElementType;
-
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Main {
-    private final static String FOLDER_TO_CLONE = "tmp/";
 
     public static void main(String args[]) throws Exception {
+        // METHOD TRACKING
+
+        String repoPath = args[0];
+        String filePath = args[1];
+        String startCommitId = args[2];
+        String methodName = args[3];
+        int startLine = Integer.parseInt(args[4]);
+        String outPath = args[5];
+
         GitService gitService = new GitServiceImpl();
-        // BLOCK TRACKING EXAMPLE
-        try (Repository repository = gitService.cloneIfNotExists(FOLDER_TO_CLONE + "checkstyle\\checkstyle",
-                "https://github.com/checkstyle/checkstyle.git")){
-
-            BlockTracker blockTracker = CodeTracker.blockTracker()
-                    .repository(repository)
-                    .filePath("src/main/java/com/puppycrawl/tools/checkstyle/Checker.java")
-                    .startCommitId("119fd4fb33bef9f5c66fc950396669af842c21a3")
-                    .methodName("fireErrors")
-                    .methodDeclarationLineNumber(384)
-                    .codeElementType(CodeElementType.ENHANCED_FOR_STATEMENT)
-                    .blockStartLineNumber(391)
-                    .blockEndLineNumber(393)
-                    .build();
-
-            History<Block> blockHistory = blockTracker.track();
-
-            for (History.HistoryInfo<Block> historyInfo : blockHistory.getHistoryInfoList()) {
-                System.out.println("======================================================");
-                System.out.println("Commit ID: " + historyInfo.getCommitId());
-                System.out.println("Date: " +
-                        LocalDateTime.ofEpochSecond(historyInfo.getCommitTime(), 0, ZoneOffset.UTC));
-                System.out.println("Before: " + historyInfo.getElementBefore().getName());
-                System.out.println("After: " + historyInfo.getElementAfter().getName());
-
-                for (Change change : historyInfo.getChangeList()) {
-                    System.out.println(change.getType().getTitle() + ": " + change);
-                }
-            }
-            System.out.println("======================================================");
-        }
-        // METHOD TRACKING EXAMPLE
-        try (Repository repository = gitService.cloneIfNotExists(FOLDER_TO_CLONE + "checkstyle\\checkstyle",
-                "https://github.com/checkstyle/checkstyle.git")){
+        try (Repository repository = gitService.openRepository(repoPath)){
 
             MethodTracker methodTracker = CodeTracker.methodTracker()
                     .repository(repository)
-                    .filePath("src/main/java/com/puppycrawl/tools/checkstyle/Checker.java")
-                    .startCommitId("119fd4fb33bef9f5c66fc950396669af842c21a3")
-                    .methodName("fireErrors")
-                    .methodDeclarationLineNumber(384)
+                    .filePath(filePath)
+                    .startCommitId(startCommitId)
+                    .methodName(methodName)
+                    .methodDeclarationLineNumber(startLine)
                     .build();
 
             History<Method> methodHistory = methodTracker.track();
 
+            List<Map<String, Object>> historyList = new ArrayList<>();
+
             for (History.HistoryInfo<Method> historyInfo : methodHistory.getHistoryInfoList()) {
-                System.out.println("======================================================");
-                System.out.println("Commit ID: " + historyInfo.getCommitId());
-                System.out.println("Date: " +
-                        LocalDateTime.ofEpochSecond(historyInfo.getCommitTime(), 0, ZoneOffset.UTC));
-                System.out.println("Before: " + historyInfo.getElementBefore().getName());
-                System.out.println("After: " + historyInfo.getElementAfter().getName());
-
+                Map<String, Object> historyMap = new HashMap<>();
+                historyMap.put("commitId", historyInfo.getCommitId());
+                historyMap.put("commitDate", LocalDateTime.ofEpochSecond(historyInfo.getCommitTime(), 0, ZoneOffset.UTC).toString());
+                historyMap.put("elementBeforeFilePath", historyInfo.getElementBefore().getFilePath());
+                historyMap.put("elementBeforeFileName", historyInfo.getElementBefore().getName());
+                historyMap.put("elementAfterFilePath", historyInfo.getElementAfter().getFilePath());
+                historyMap.put("elementAfterName", historyInfo.getElementAfter().getName());
+                
+                List<String> changeList = new ArrayList<>();
                 for (Change change : historyInfo.getChangeList()) {
-                    System.out.println(change.getType().getTitle() + ": " + change);
+                    changeList.add(change.getType().getTitle() + ": " + change);
                 }
+                historyMap.put("changeList", changeList);
+    
+                historyList.add(historyMap);
             }
-            System.out.println("======================================================");
-        }
-        // VARIABLE TRACKING EXAMPLE
-        try (Repository repository = gitService.cloneIfNotExists(FOLDER_TO_CLONE + "checkstyle\\checkstyle",
-                "https://github.com/checkstyle/checkstyle.git")){
+            ObjectMapper objectMapper = new ObjectMapper();
+            String response = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(historyList);
+            System.out.println(response);
 
-            VariableTracker variableTracker = CodeTracker.variableTracker()
-                    .repository(repository)
-                    .filePath("src/main/java/com/puppycrawl/tools/checkstyle/Checker.java")
-                    .startCommitId("119fd4fb33bef9f5c66fc950396669af842c21a3")
-                    .methodName("fireErrors")
-                    .methodDeclarationLineNumber(384)
-                    .variableName("stripped")
-                    .variableDeclarationLineNumber(385)
-                    .build();
-
-            History<Variable> variableHistory = variableTracker.track();
-
-            for (History.HistoryInfo<Variable> historyInfo : variableHistory.getHistoryInfoList()) {
-                System.out.println("======================================================");
-                System.out.println("Commit ID: " + historyInfo.getCommitId());
-                System.out.println("Date: " +
-                        LocalDateTime.ofEpochSecond(historyInfo.getCommitTime(), 0, ZoneOffset.UTC));
-                System.out.println("Before: " + historyInfo.getElementBefore().getName());
-                System.out.println("After: " + historyInfo.getElementAfter().getName());
-
-                for (Change change : historyInfo.getChangeList()) {
-                    System.out.println(change.getType().getTitle() + ": " + change);
-                }
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outPath))) {
+                writer.write(response);
             }
-            System.out.println("======================================================");
-        }
-
-        // ATTRIBUTE TRACKING EXAMPLE
-        try (Repository repository = gitService.cloneIfNotExists(FOLDER_TO_CLONE + "checkstyle\\checkstyle",
-                "https://github.com/checkstyle/checkstyle.git")) {
-
-            AttributeTracker attributeTracker = CodeTracker.attributeTracker()
-                    .repository(repository)
-                    .filePath("src/main/java/com/puppycrawl/tools/checkstyle/Checker.java")
-                    .startCommitId("119fd4fb33bef9f5c66fc950396669af842c21a3")
-                    .attributeName("cacheFile")
-                    .attributeDeclarationLineNumber(132)
-                    .build();
-
-            History<Attribute> attributeHistory = attributeTracker.track();
-
-            for (History.HistoryInfo<Attribute> historyInfo : attributeHistory.getHistoryInfoList()) {
-                System.out.println("======================================================");
-                System.out.println("Commit ID: " + historyInfo.getCommitId());
-                System.out.println("Date: " +
-                        LocalDateTime.ofEpochSecond(historyInfo.getCommitTime(), 0, ZoneOffset.UTC));
-                System.out.println("Before: " + historyInfo.getElementBefore().getName());
-                System.out.println("After: " + historyInfo.getElementAfter().getName());
-
-                for (Change change : historyInfo.getChangeList()) {
-                    System.out.println(change.getType().getTitle() + ": " + change);
-                }
-            }
-            System.out.println("======================================================");
         }
     }
 }

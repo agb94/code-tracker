@@ -1,3 +1,17 @@
+# ! Modified Version !
+modified by Gabin An <hi.gabin@gmail.com>
+
+
+- This version supports CLI for the method history tracking
+
+```shell
+mvn package
+java -jar target/code-tracker-2.6-SNAPSHOT.jar {repoPath} {filePath} {startCommit} {methodName} {startLine} {jsonOutFile}
+# example
+java -jar target/code-tracker-2.6-SNAPSHOT.jar /tmp/Lang-5b/ src/main/java/org/apache/commons/lang3/StringUtils.java 379151bad9c5402c335db67f9494351b99298732 trimToNull 318 ./out.json
+```
+
+
 <h1>Code Tracker</h1>
 
 This project aims to introduce CodeTracker, a refactoring-aware tool that can generate the commit change history for method and variable declarations in a Java project with a very high accuracy.
