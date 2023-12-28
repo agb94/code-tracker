@@ -1,14 +1,13 @@
 # ! Modified Version !
 modified by Gabin An <hi.gabin@gmail.com>
 
-
 - This version supports CLI for the method history tracking
 
 ```shell
-mvn package
-java -jar target/code-tracker-2.6-SNAPSHOT.jar {repoPath} {filePath} {startCommit} {methodName} {startLine} {jsonOutFile}
+mvn clean compile assembly:single
+java -jar target/ccode-tracker-2.6-SNAPSHOT-jar-with-dependencies.jar {repoPath} {filePath} {startCommit} {methodName} {startLine} {jsonOutFile}
 # example
-java -jar target/code-tracker-2.6-SNAPSHOT.jar /tmp/Lang-5b/ src/main/java/org/apache/commons/lang3/StringUtils.java 379151bad9c5402c335db67f9494351b99298732 trimToNull 318 ./out.json
+java -jar target/code-tracker-2.6-SNAPSHOT-jar-with-dependencies.jar /tmp/Lang-5b/ src/main/java/org/apache/commons/lang3/StringUtils.java 379151bad9c5402c335db67f9494351b99298732 trimToNull 318 ./out.json
 ```
 
 
